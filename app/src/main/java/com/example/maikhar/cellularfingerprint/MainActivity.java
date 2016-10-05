@@ -9,12 +9,18 @@ import android.os.Bundle;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
 import android.text.InputType;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.EditText;
+import android.widget.Toast;
 
 import java.util.ArrayList;
+
+
 
 
 
@@ -27,36 +33,58 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
     CheckBox gps,gps1;
     LocationManager manager;
     String timer;
+    AlertDialog alert;
+    AlertDialog alertGps;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+
         final AlertDialog.Builder builder = new AlertDialog.Builder(this);
-        builder.setTitle("Enter the interval in seconds");
-        final EditText input = new EditText(this);
-// Specify the type of input expected; this, for example, sets the input as a password, and will mask the text
-        input.setInputType(InputType.TYPE_CLASS_NUMBER);
-        builder.setView(input);
+        //Uncomment the below code to Set the message and title from the strings.xml file
+        //builder.setMessage(R.string.dialog_message) .setTitle(R.string.dialog_title);
 
-        builder.setPositiveButton("OK", new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-               timer = input.getText().toString();
-              /*  int tim = Integer.parseInt(timer);
-                if(tim <= 15 || tim >=5)
-                {
-                    AlertDialog dialog1 = builder.create();
-                    dialog1.show();
-                }
-*/
-            }
+        //Setting message manually and performing action on button click
+        final EditText input=new EditText(MainActivity.this);
+        input.setText("10");
+        builder.setMessage("Default is 10 sec.") // chnage this
+                .setCancelable(false)
+                .setView(input)
+                .setPositiveButton("Okay", new DialogInterface.OnClickListener() {
+                    public void onClick(DialogInterface dialog, int id) {
+                        //builder.setView(null);
+                        String temp=input.getText().toString();
+                        int value=10;
+                        try {
+                             value = Integer.parseInt(temp);
+                        }catch (NumberFormatException e)
+                        {
+                            Toast.makeText(MainActivity.this,"Only Numbers",Toast.LENGTH_SHORT).show();
+                        }
+                        if( value<5 || value>15)
+                        {
 
-    });
-  //      AlertDialog dialog = builder.create();
-            builder.show();
-    //    dialog.show();
+                            ((ViewGroup)input.getParent()).removeView(input);
+                            AlertDialog alert = builder.create();
+                            alert.setMessage("Value should be between 5 and 15 ");
+                            alert.setTitle("*Enter the Timer value");
+                            alert.show();
+                        }
+                        else
+                        {
+                            timer=String.valueOf(value);
+                            Toast.makeText(getBaseContext(),"Success value is"+value,Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+
+        //Creating dialog box
+        alert = builder.create();
+        //Setting the title manually
+        alert.setTitle("Enter the Timer value");
+
 
 
 
@@ -87,6 +115,8 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                             startActivity(intent);
                             gps.setEnabled(true);
                             gps1.setEnabled(true);
+                            gps1.setText("Latitude");
+                            gps.setText("Longitude");
 
 
                         }
@@ -95,10 +125,18 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                 @Override
                 public void onClick(DialogInterface dialogInterface, int i) {
                     dialogInterface.cancel();
+
+                    gps1.setText("Enable location service");
+                    gps.setText("Enable location service");
+
                 }
             });
+
+            alertGps=alertDialog.create();
         alertDialog.show();
         }
+
+
 
 
     }
@@ -233,6 +271,26 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
         i.putExtra("timer",timer);
         startActivity(i);
     }
+
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu, menu);//Menu Resource, Menu
+        return true;
+    }
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.timerSetting:
+                Toast.makeText(getApplicationContext(),"Chnage reload time in sec",Toast.LENGTH_LONG).show();
+                alert.show();
+                break;
+        }
+        return true;
+    }
+
+
 }
 
 

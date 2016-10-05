@@ -1,8 +1,12 @@
 package com.example.maikhar.cellularfingerprint;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
@@ -19,7 +23,7 @@ import java.util.Timer;
 import java.util.TimerTask;
 
 
-public class secondActivity extends AppCompatActivity {
+public class secondActivity extends AppCompatActivity implements ActivityCompat.OnRequestPermissionsResultCallback {
 
     SimpleDateFormat sdf = new SimpleDateFormat("dd:MMMM:yyyy KK:mm:ss a");
     List<CustObj> clist_main;
@@ -30,11 +34,40 @@ public class secondActivity extends AppCompatActivity {
 
 
     @Override
+    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
+        switch (requestCode) {
+            case 1:
+                if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
+                    //TODO
+                }
+                break;
+
+            default:
+                break;
+        }
+    }
+
+    @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_second);
 
-        sec = Integer.parseInt(getIntent().getStringExtra("timer"))*1000;
+
+        int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
+
+        if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.READ_PHONE_STATE},1);
+        } else {
+            //TODO
+        }
+
+
+
+        setContentView(R.layout.activity_second);
+        if (getIntent().getStringExtra("timer") == null)
+            sec=5000;
+        else
+            sec = Integer.parseInt(getIntent().getStringExtra("timer"))*1000;
+
         clist = getIntent().getStringArrayListExtra("clist");
 
          clist_main = new ArrayList<>();
