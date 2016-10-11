@@ -4,6 +4,10 @@ import android.Manifest;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -30,7 +34,12 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     TextView parameters;
     int sec;
     ArrayList<String> clist;
-    String abc1,str;
+    String abc1,str,result,result1;
+    private SensorManager mSensorManager;
+    private Sensor accelerometer;
+    private Sensor compass;
+    private SensorEventListener accelerometerListner;
+    private SensorEventListener compassListner;
 
 
     @Override
@@ -63,6 +72,10 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
 
         setContentView(R.layout.activity_second);
+        mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+        accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        compass = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
         if (getIntent().getStringExtra("timer") == null)
             sec=5000;
         else
@@ -208,6 +221,47 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
                 }
                 co.setVal(str);
             }
+
+            if(co.getName().equals("accelerometer"))
+            {
+
+                co.setVal(accele());
+            }
+
+            if(co.getName().equals("compass"))
+            {
+                compassListner = new SensorEventListener() {
+                    @Override
+                    public void onSensorChanged(SensorEvent event) {
+//                Log.d("pranjal","sensorchanged compass events = "+event);
+
+                        final double alpha = 0.8;
+                        final double linear_acceleration[];
+                        final double gravity[];
+
+                        gravity = new double[3];
+                        linear_acceleration = new double[3];
+
+                        gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
+                        gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
+                        gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
+
+                        linear_acceleration[0] = event.values[0] - gravity[0];
+                        linear_acceleration[1] = event.values[1] - gravity[1];
+                        linear_acceleration[2] = event.values[2] - gravity[2];
+
+                        result1 = ("Compass Data X: "+ String.valueOf(linear_acceleration[0])+" Y: "+String.valueOf(linear_acceleration[1])+" Z: "+String.valueOf(linear_acceleration[2]));
+
+
+                    }
+
+                    @Override
+                    public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+                    }
+                };
+                co.setVal(result1);
+            }
         }
 
     }
@@ -237,4 +291,41 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         parameters.setTextSize(20);
     }
 
+    public String accele()
+    {
+        accelerometerListner = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+//                Log.d("pranjal","sensorchanged accelerometer events = ");
+
+
+                final double alpha = 0.8;
+                final double linear_acceleration[];
+                final double gravity[];
+
+
+                gravity = new double[3];
+                linear_acceleration = new double[3];
+
+                gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
+                gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
+                gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
+
+                linear_acceleration[0] = event.values[0] - gravity[0];
+                linear_acceleration[1] = event.values[1] - gravity[1];
+                linear_acceleration[2] = event.values[2] - gravity[2];
+
+                result = ("Accelerometer Data X: "+ String.valueOf(linear_acceleration[0])+" Y: "+String.valueOf(linear_acceleration[1])+" Z: "+String.valueOf(linear_acceleration[2]));
+
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+
+        };
+        return result;
+
+    }
 }
