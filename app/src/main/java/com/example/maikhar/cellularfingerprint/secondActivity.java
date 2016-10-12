@@ -2,12 +2,16 @@ package com.example.maikhar.cellularfingerprint;
 
 import android.Manifest;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.location.Criteria;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
@@ -34,12 +38,19 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     TextView parameters;
     int sec;
     ArrayList<String> clist;
-    String abc1,str,result,result1;
+    String abc1,str,result="",result1="";
     private SensorManager mSensorManager;
     private Sensor accelerometer;
     private Sensor compass;
     private SensorEventListener accelerometerListner;
     private SensorEventListener compassListner;
+    TelephonyManager Tel;
+    Gpstracker gps;
+    Double latitude,longitude;
+    LocationManager locationManager;
+
+    MyPhoneStateListener MyListener;
+
 
 
     @Override
@@ -75,6 +86,98 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         compass = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
+
+
+        MyListener = new MyPhoneStateListener();
+        Tel = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
+        Tel.listen(MyListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+
+        compassListner = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+//                Log.d("pranjal","sensorchanged compass events = "+event);
+
+                final double alpha = 0.8;
+                final double linear_acceleration[];
+                final double gravity[];
+
+                gravity = new double[3];
+                linear_acceleration = new double[3];
+
+                gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
+                gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
+                gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
+
+                linear_acceleration[0] = event.values[0] - gravity[0];
+                linear_acceleration[1] = event.values[1] - gravity[1];
+                linear_acceleration[2] = event.values[2] - gravity[2];
+
+                result1 = "Compass Data X: "+ String.valueOf(linear_acceleration[0])+" Y: "+String.valueOf(linear_acceleration[1])+" Z: "+String.valueOf(linear_acceleration[2]);
+                //Log.d("com",result1);
+
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+        };
+        Log.d("IntiliazeGps","true");
+        gps = new Gpstracker(secondActivity.this);
+        latitude = (gps.getLatitude());
+        longitude = gps.getLongitude();
+        Log.d("IGps","true");
+        String svcName = Context.LOCATION_SERVICE;
+        locationManager = (LocationManager) getSystemService(svcName);
+
+        Criteria criteria = new Criteria();
+        criteria.setAccuracy(Criteria.ACCURACY_FINE);
+        criteria.setPowerRequirement(Criteria.POWER_LOW);
+        criteria.setAltitudeRequired(false);
+        criteria.setBearingRequired(false);
+        criteria.setSpeedRequired(false);
+        criteria.setCostAllowed(true);
+        String provider = locationManager.getBestProvider(criteria, true);
+
+
+
+
+        Location l = locationManager
+                .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        Log.d("lat",String.valueOf(latitude));
+
+        accelerometerListner = new SensorEventListener() {
+            @Override
+            public void onSensorChanged(SensorEvent event) {
+//                Log.d("pranjal","sensorchanged accelerometer events = ");
+
+
+                final double alpha = 0.8;
+                final double linear_acceleration[];
+                final double gravity[];
+
+
+                gravity = new double[3];
+                linear_acceleration = new double[3];
+
+                gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
+                gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
+                gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
+
+                linear_acceleration[0] = event.values[0] - gravity[0];
+                linear_acceleration[1] = event.values[1] - gravity[1];
+                linear_acceleration[2] = event.values[2] - gravity[2];
+
+                result = ("Accelerometer Data X: "+ String.valueOf(linear_acceleration[0])+" Y: "+String.valueOf(linear_acceleration[1])+" Z: "+String.valueOf(linear_acceleration[2]));
+
+            }
+
+            @Override
+            public void onAccuracyChanged(Sensor sensor, int accuracy) {
+
+            }
+
+        };
 
         if (getIntent().getStringExtra("timer") == null)
             sec=5000;
@@ -188,79 +291,32 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             }
             if(co.getName().equals("maincell"))
             {
-                class MyPhoneStateListener extends PhoneStateListener {
-                    /*
-                     * Get the Signal strength from the provider, each time there is an
-                     * update
-                     */
-                    @Override
-                    public void onSignalStrengthsChanged(SignalStrength signalStrength) {
-                        super.onSignalStrengthsChanged(signalStrength);
 
-
-                        abc1 = String.valueOf((2 * signalStrength
-                                .getGsmSignalStrength()) - 113);
-
-            /*SharedPreferences prefs = getSharedPreferences("DD", 0);
-
-            SharedPreferences.Editor Editor = prefs.edit();
-
-            Editor.putString("signal", abc1);*/
-
-                        str = String.valueOf(signalStrength.getGsmSignalStrength());
-
-
-                        // Toast.makeText(
-                        // Tom Xue: lifecycle related
-                        // getApplicationContext(),
-                        // "Main Cell Dbm : "
-                        // + sig.getText(),
-                        // Toast.LENGTH_SHORT).show();
-
-                    }
-                }
-                co.setVal(str);
+                co.setVal(abc1);
             }
 
             if(co.getName().equals("accelerometer"))
             {
 
-                co.setVal(accele());
+                co.setVal(result);
             }
 
             if(co.getName().equals("compass"))
             {
-                compassListner = new SensorEventListener() {
-                    @Override
-                    public void onSensorChanged(SensorEvent event) {
-//                Log.d("pranjal","sensorchanged compass events = "+event);
 
-                        final double alpha = 0.8;
-                        final double linear_acceleration[];
-                        final double gravity[];
-
-                        gravity = new double[3];
-                        linear_acceleration = new double[3];
-
-                        gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
-                        gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
-                        gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
-
-                        linear_acceleration[0] = event.values[0] - gravity[0];
-                        linear_acceleration[1] = event.values[1] - gravity[1];
-                        linear_acceleration[2] = event.values[2] - gravity[2];
-
-                        result1 = ("Compass Data X: "+ String.valueOf(linear_acceleration[0])+" Y: "+String.valueOf(linear_acceleration[1])+" Z: "+String.valueOf(linear_acceleration[2]));
-
-
-                    }
-
-                    @Override
-                    public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-                    }
-                };
                 co.setVal(result1);
+            }
+            if(co.getName().equals("latitude"))
+            {
+
+
+                co.setVal(String.valueOf(latitude));
+
+            }
+            if(co.getName().equals("longitude"))
+            {
+
+                co.setVal(String.valueOf(longitude));
             }
         }
 
@@ -291,41 +347,80 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         parameters.setTextSize(20);
     }
 
-    public String accele()
-    {
-        accelerometerListner = new SensorEventListener() {
-            @Override
-            public void onSensorChanged(SensorEvent event) {
-//                Log.d("pranjal","sensorchanged accelerometer events = ");
 
 
-                final double alpha = 0.8;
-                final double linear_acceleration[];
-                final double gravity[];
 
-
-                gravity = new double[3];
-                linear_acceleration = new double[3];
-
-                gravity[0] = alpha * gravity[0] + (1 - alpha) * event.values[0];
-                gravity[1] = alpha * gravity[1] + (1 - alpha) * event.values[1];
-                gravity[2] = alpha * gravity[2] + (1 - alpha) * event.values[2];
-
-                linear_acceleration[0] = event.values[0] - gravity[0];
-                linear_acceleration[1] = event.values[1] - gravity[1];
-                linear_acceleration[2] = event.values[2] - gravity[2];
-
-                result = ("Accelerometer Data X: "+ String.valueOf(linear_acceleration[0])+" Y: "+String.valueOf(linear_acceleration[1])+" Z: "+String.valueOf(linear_acceleration[2]));
-
-            }
-
-            @Override
-            public void onAccuracyChanged(Sensor sensor, int accuracy) {
-
-            }
-
-        };
-        return result;
+    protected void onResume() {
+        super.onResume();
+       Tel.listen(MyListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+        mSensorManager.registerListener(accelerometerListner, accelerometer, SensorManager.SENSOR_DELAY_NORMAL);
+        mSensorManager.registerListener(compassListner, compass, SensorManager.SENSOR_DELAY_NORMAL);
 
     }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        Tel.listen(MyListener, PhoneStateListener.LISTEN_NONE);
+        mSensorManager.unregisterListener(accelerometerListner);
+        mSensorManager.unregisterListener(compassListner);
+    }
+
+    private class MyPhoneStateListener extends PhoneStateListener {
+        /*
+         * Get the Signal strength from the provider, each time there is an
+         * update
+         */
+        @Override
+        public void onSignalStrengthsChanged(SignalStrength signalStrength) {
+            super.onSignalStrengthsChanged(signalStrength);
+
+            //sig = (TextView) findViewById(R.id.Mrssi);
+
+            abc1 = String.valueOf((2 * signalStrength
+                    .getGsmSignalStrength()) - 113);
+
+            SharedPreferences prefs = getSharedPreferences("DD", 0);
+
+            SharedPreferences.Editor Editor = prefs.edit();
+
+            Editor.putString("signal", abc1);
+
+           str = String.valueOf(signalStrength.getGsmSignalStrength());
+
+            //sig.setText("main cell dbm : " + abc1);
+            // Toast.makeText(
+            // Tom Xue: lifecycle related
+            // getApplicationContext(),
+            // "Main Cell Dbm : "
+            // + sig.getText(),
+            // Toast.LENGTH_SHORT).show();
+
+        }
+    };/* End of private Class */
+
+
 }
+
+/*String stringNeighboring = "Neighboring List- Lac : Cid : RSSI\n";
+
+							for (int i = 0; i < NeighboringList.size(); i++) {
+
+								String dBm;
+								int rssi = NeighboringList.get(i).getRssi();
+								rssi = (2 * rssi) -113 ;
+								if (rssi == NeighboringCellInfo.UNKNOWN_RSSI) {
+									dBm = "Unknown RSSI";
+								} else {
+									dBm = String.valueOf(rssi) + " dBm";
+								}
+
+								stringNeighboring = stringNeighboring
+										+ String.valueOf(NeighboringList.get(i)
+												.getLac())
+										+ "\t     :    "
+										+ String.valueOf(NeighboringList.get(i)
+												.getCid()) + "\t     :    "
+										+ dBm + "\n";
+							}
+							*/
