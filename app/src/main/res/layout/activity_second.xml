@@ -15,5 +15,7 @@
         android:text="List"
         android:id="@+id/parameters"
         android:layout_alignParentTop="true"
-        android:layout_alignParentStart="true" />
+        android:layout_alignParentStart="true"
+        android:layout_alignParentLeft="true" />
+
 </RelativeLayout>

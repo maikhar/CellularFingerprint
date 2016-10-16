@@ -16,13 +16,20 @@ import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
+import android.telephony.NeighboringCellInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
 import android.telephony.gsm.GsmCellLocation;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.TextView;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
@@ -38,7 +45,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     TextView parameters;
     int sec;
     ArrayList<String> clist;
-    String abc1,str,result="",result1="";
+    String abc1,str,result="",result1="",mcc,mnc,neiglist="";
     private SensorManager mSensorManager;
     private Sensor accelerometer;
     private Sensor compass;
@@ -48,6 +55,12 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     Gpstracker gps;
     Double latitude,longitude;
     LocationManager locationManager;
+    File myFile;
+    OutputStreamWriter myOutWriter;
+    FileOutputStream fOut;
+
+    final String uploadFilePath = "/sdcard/";
+    final String uploadFileName = "cell.txt";
 
     MyPhoneStateListener MyListener;
 
@@ -80,6 +93,18 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             //TODO
         }
 
+
+
+        myFile = new File("/sdcard/cell.txt");
+
+        if (!myFile.exists()) {
+            try {
+                myFile.createNewFile();
+            } catch (IOException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+        }
 
 
         setContentView(R.layout.activity_second);
@@ -130,6 +155,8 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         String svcName = Context.LOCATION_SERVICE;
         locationManager = (LocationManager) getSystemService(svcName);
 
+
+
         Criteria criteria = new Criteria();
         criteria.setAccuracy(Criteria.ACCURACY_FINE);
         criteria.setPowerRequirement(Criteria.POWER_LOW);
@@ -178,6 +205,8 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             }
 
         };
+
+
 
         if (getIntent().getStringExtra("timer") == null)
             sec=5000;
@@ -279,18 +308,54 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         String cellid = String.valueOf(cellLocation.getCid());
 
 
+            List<NeighboringCellInfo>  neighCell = null;
+            //TelephonyManager telManager = ( TelephonyManager )getSystemService(Context.TELEPHONY_SERVICE);
+            neighCell = telephonyManager.getNeighboringCellInfo();
+            String neig = null;
+            for (int i = 0; i < neighCell.size(); i++) {
+                try {
+                    NeighboringCellInfo thisCell = neighCell.get(i);
+                    int thisNeighCID = thisCell.getCid();
+                    int thisNeighRSSI = thisCell.getRssi();
+                    int lac = thisCell.getLac();
+                    neig = (" "+String.valueOf(thisNeighCID)+" - "+String.valueOf(thisNeighRSSI)+" " + String.valueOf(lac));
+                } catch (NumberFormatException e) {
+                    e.printStackTrace();
+                    NeighboringCellInfo thisCell = neighCell.get(i);
+                    Log.d("err",neighCell.toString());
+                }
+            }
+
+
+
+
+        locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE );
+        boolean statusOfGPS = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+        String networkOperator = telephonyManager.getNetworkOperator();
+
+
+
+
+
+
 
         for(CustObj co:clist_main){
             if(co.getName().equals("datetime")){
                 co.setVal(strDate);
-                Log.d("update","Calling UpdateUI");
+
+
+
             }
             if(co.getName().equals("cellid"))
             {
+
+
                 co.setVal(cellid);
             }
             if(co.getName().equals("maincell"))
             {
+
 
                 co.setVal(abc1);
             }
@@ -298,16 +363,19 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             if(co.getName().equals("accelerometer"))
             {
 
+
                 co.setVal(result);
             }
 
             if(co.getName().equals("compass"))
             {
 
+
                 co.setVal(result1);
             }
             if(co.getName().equals("latitude"))
             {
+
 
 
                 co.setVal(String.valueOf(latitude));
@@ -318,7 +386,66 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
                 co.setVal(String.valueOf(longitude));
             }
+            if(co.getName().equals("mcc"))
+            {
+                mcc = (networkOperator.substring(0, 3));
+
+                co.setVal(String.valueOf(mcc));
+
+
+            }
+            if(co.getName().equals("mnc"))
+            {
+                mnc = (networkOperator.substring(3));
+
+
+                co.setVal(String.valueOf(mnc));
+            }
+
+            if(co.getName().equals("neighbors"))
+            {
+
+                co.setVal(neig);
+            }
         }
+
+
+
+        try {
+
+
+                FileOutputStream fOut=null;
+                fOut = new FileOutputStream(myFile, true);
+                myOutWriter = new OutputStreamWriter(
+                        fOut);
+
+            myOutWriter.append("\n");
+            myOutWriter.append(cellid);
+            myOutWriter.append("\n");
+            myOutWriter.append(strDate);
+            myOutWriter.append("\n");
+            myOutWriter.append(abc1);
+            myOutWriter.append("\n");
+            myOutWriter.append(result);
+            myOutWriter.append("\n");
+            myOutWriter.append(result1);
+            myOutWriter.append("\n");
+            myOutWriter.append(String.valueOf(latitude));
+            myOutWriter.append("\n");
+            myOutWriter.append(String.valueOf(longitude));
+            myOutWriter.append("\n");
+            myOutWriter.append(mnc);
+            myOutWriter.append("\n");
+            myOutWriter.append(mcc);
+
+
+
+            myOutWriter.close();
+            fOut.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
 
     }
 
@@ -346,6 +473,8 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         parameters.setTextColor(Color.BLACK);
         parameters.setTextSize(20);
     }
+
+
 
 
 
@@ -399,6 +528,22 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         }
     };/* End of private Class */
 
+    public boolean onCreateOptionsMenu(Menu menu) {
+        // Inflate the menu; this adds items to the action bar if it is present.
+        getMenuInflater().inflate(R.menu.menu_2, menu);//Menu Resource, Menu
+        return true;
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+            case R.id.Upload:
+
+               // Toast.makeText(getApplicationContext(),"Item 1 Selected",Toast.LENGTH_LONG).show();
+                return true;
+            default:
+                return super.onOptionsItemSelected(item);
+        }
+    }
 
 }
 
