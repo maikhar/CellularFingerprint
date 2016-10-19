@@ -1,6 +1,7 @@
 package com.example.maikhar.cellularfingerprint;
 
 import android.Manifest;
+import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -12,11 +13,12 @@ import android.hardware.SensorManager;
 import android.location.Criteria;
 import android.location.Location;
 import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
-import android.telephony.NeighboringCellInfo;
+import android.telephony.CellInfo;
 import android.telephony.PhoneStateListener;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
@@ -58,6 +60,9 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     File myFile;
     OutputStreamWriter myOutWriter;
     FileOutputStream fOut;
+    StringBuilder telephonyInfo;
+
+    List<CellInfo> mNeighboringCellInfo;
 
     final String uploadFilePath = "/sdcard/";
     final String uploadFileName = "cell.txt";
@@ -84,7 +89,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-
+        telephonyInfo = new StringBuilder();
         int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
 
         if (permissionCheck != PackageManager.PERMISSION_GRANTED) {
@@ -298,6 +303,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
 
 
+    @TargetApi(Build.VERSION_CODES.JELLY_BEAN_MR1)
     public void updateUI(){
 
         Calendar c = Calendar.getInstance();
@@ -308,7 +314,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         String cellid = String.valueOf(cellLocation.getCid());
 
 
-            List<NeighboringCellInfo>  neighCell = null;
+           /* List<NeighboringCellInfo>  neighCell = null;
             //TelephonyManager telManager = ( TelephonyManager )getSystemService(Context.TELEPHONY_SERVICE);
             neighCell = telephonyManager.getNeighboringCellInfo();
             String neig = null;
@@ -325,15 +331,31 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
                     Log.d("err",neighCell.toString());
                 }
             }
-
+*/
 
 
 
         locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE );
-        boolean statusOfGPS = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        //boolean statusOfGPS = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
         String networkOperator = telephonyManager.getNetworkOperator();
-
+        mNeighboringCellInfo = telephonyManager.getAllCellInfo();
+        Log.d("Neighbors : ", String.valueOf(mNeighboringCellInfo));
+       /* if (!mNeighboringCellInfo.isEmpty()) {
+            int i = 1;
+            for (CellInfo cellInfo : mNeighboringCellInfo) {
+                Log.i("cellinfo", "Neighbor CellInfo No." + i + " LAC:"
+                                + cellInfo.getLac() + ", CID:"
+                                + cellInfo.getCid() + ", RSSI:"
+                                + cellInfo.getRssi());
+                i++;
+                telephonyInfo.append("Neighbor CellInfo No." + i
+                        + ", Location Area Code: " + cellInfo.getLac()
+                        + ", Cell ID: " + cellInfo.getCid()
+                        + ", Signal Strength: " + cellInfo.getRssi() + "\r\n");
+            }
+        } else
+            telephonyInfo.append("No Neighbor Cell Info!");*/
 
 
 
@@ -405,7 +427,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             if(co.getName().equals("neighbors"))
             {
 
-                co.setVal(neig);
+                //co.setVal(neig);
             }
         }
 
