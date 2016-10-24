@@ -8,7 +8,6 @@ import android.location.LocationManager;
 import android.os.Bundle;
 import android.provider.Settings;
 import android.support.v7.app.AppCompatActivity;
-import android.text.InputType;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -63,12 +62,12 @@ public class MainActivity extends AppCompatActivity implements View.OnClickListe
                         {
                             Toast.makeText(MainActivity.this,"Only Numbers",Toast.LENGTH_SHORT).show();
                         }
-                        if( value<5 || value>15)
+                        if( value<1 || value>300)
                         {
 
                             ((ViewGroup)input.getParent()).removeView(input);
                             AlertDialog alert = builder.create();
-                            alert.setMessage("Value should be between 5 and 15 ");
+                            alert.setMessage("Value should be between 0 and 300 ");
                             alert.setTitle("*Enter the Timer value");
                             alert.show();
                         }
