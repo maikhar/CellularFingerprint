@@ -427,7 +427,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             if(co.getName().equals("neighbors"))
             {
 
-                //co.setVal(neig);
+                co.setVal(String.valueOf(mNeighboringCellInfo));
             }
         }
 
