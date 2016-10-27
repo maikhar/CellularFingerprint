@@ -2,7 +2,10 @@ package com.example.maikhar.cellularfingerprint;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.Context;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.graphics.Color;
@@ -15,6 +18,7 @@ import android.location.Location;
 import android.location.LocationManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
@@ -27,8 +31,16 @@ import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.widget.TextView;
+import android.widget.Toast;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.error.VolleyError;
+import com.android.volley.request.SimpleMultiPartRequest;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -61,6 +73,16 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     OutputStreamWriter myOutWriter;
     FileOutputStream fOut;
     StringBuilder telephonyInfo;
+    String Filepath = "/sdcard/cell.txt";
+    private boolean Permission_Granted = false;
+    private boolean GPS_Permission = false;
+    private static final int MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE = 100;
+    private static final int MY_PERMISSIONS_FINE_LOCATION = 105;
+    private RequestQueue mqueue;
+    private static final String Url = "http://cellularfingerprint.pe.hu/upload/upload.php";
+    private ProgressDialog pDialog=null;
+    private String IFilename = "cell.txt;";
+    private String Ifilepath = "";
 
     List<CellInfo> mNeighboringCellInfo;
 
@@ -70,25 +92,11 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     MyPhoneStateListener MyListener;
 
 
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, String permissions[], int[] grantResults) {
-        switch (requestCode) {
-            case 1:
-                if ((grantResults.length > 0) && (grantResults[0] == PackageManager.PERMISSION_GRANTED)) {
-                    //TODO
-                }
-                break;
-
-            default:
-                break;
-        }
-    }
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        setContentView(R.layout.activity_second);
         telephonyInfo = new StringBuilder();
         int permissionCheck = ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION);
 
@@ -97,22 +105,31 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         } else {
             //TODO
         }
+        MyVolley.init(this);
+        mqueue = MyVolley.getRequestQueue();
 
 
+        if(checkPermission()) {
+            Permission_Granted = true;
+            myFile = new File(Filepath);
 
-        myFile = new File("/sdcard/cell.txt");
-
-        if (!myFile.exists()) {
-            try {
-                myFile.createNewFile();
-            } catch (IOException e) {
-                // TODO Auto-generated catch block
-                e.printStackTrace();
+            if (!myFile.exists()) {
+                try {
+                    myFile.createNewFile();
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
             }
         }
 
+        if(fileExist(IFilename)){
+            this.deleteFile(IFilename);
+        }
 
-        setContentView(R.layout.activity_second);
+
+
+
         mSensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
         accelerometer = mSensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         compass = mSensorManager.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD);
@@ -121,6 +138,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         MyListener = new MyPhoneStateListener();
         Tel = (TelephonyManager) getSystemService(Context.TELEPHONY_SERVICE);
         Tel.listen(MyListener, PhoneStateListener.LISTEN_SIGNAL_STRENGTHS);
+
 
         compassListner = new SensorEventListener() {
             @Override
@@ -153,30 +171,28 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             }
         };
         Log.d("IntiliazeGps","true");
-        gps = new Gpstracker(secondActivity.this);
-        latitude = (gps.getLatitude());
-        longitude = gps.getLongitude();
-        Log.d("IGps","true");
-        String svcName = Context.LOCATION_SERVICE;
-        locationManager = (LocationManager) getSystemService(svcName);
+        if(checkGpsPermission()) {
+            GPS_Permission = true;
+            gps = new Gpstracker(secondActivity.this);
+            latitude = (gps.getLatitude());
+            longitude = gps.getLongitude();
+            Log.d("IGps", "true");
+            String svcName = Context.LOCATION_SERVICE;
+            locationManager = (LocationManager) getSystemService(svcName);
 
+            Criteria criteria = new Criteria();
+            criteria.setAccuracy(Criteria.ACCURACY_FINE);
+            criteria.setPowerRequirement(Criteria.POWER_LOW);
+            criteria.setAltitudeRequired(false);
+            criteria.setBearingRequired(false);
+            criteria.setSpeedRequired(false);
+            criteria.setCostAllowed(true);
+            String provider = locationManager.getBestProvider(criteria, true);
 
-
-        Criteria criteria = new Criteria();
-        criteria.setAccuracy(Criteria.ACCURACY_FINE);
-        criteria.setPowerRequirement(Criteria.POWER_LOW);
-        criteria.setAltitudeRequired(false);
-        criteria.setBearingRequired(false);
-        criteria.setSpeedRequired(false);
-        criteria.setCostAllowed(true);
-        String provider = locationManager.getBestProvider(criteria, true);
-
-
-
-
-        Location l = locationManager
-                .getLastKnownLocation(LocationManager.GPS_PROVIDER);
-        Log.d("lat",String.valueOf(latitude));
+            Location l = locationManager
+                    .getLastKnownLocation(LocationManager.GPS_PROVIDER);
+            Log.d("lat", String.valueOf(latitude));
+        }
 
         accelerometerListner = new SensorEventListener() {
             @Override
@@ -241,11 +257,17 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
         t.scheduleAtFixedRate(new timework(),0,sec);
     }
 
+    public boolean fileExist(String fname){
+        File file = getBaseContext().getFileStreamPath(fname);
+        return file.exists();
+    }
+
     private class timework extends TimerTask{
 
         @Override
         public void run() {
-            updateUI();
+           if(Permission_Granted)
+               updateUI();
             Thread t = new Thread() {
                 @Override
                 public void run() {
@@ -261,6 +283,132 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             };
             t.start();
         }
+    }
+    public void startprogress(){
+        pDialog = new ProgressDialog(secondActivity.this);
+
+        pDialog.setMessage("Uploading File...");
+        pDialog.setIndeterminate(false);
+        pDialog.setCancelable(true);
+        pDialog.show();
+    }
+
+    public void stopprogress(){
+        if(pDialog!=null && pDialog.isShowing()){
+            pDialog.dismiss();
+        }
+    }
+
+    public boolean checkGpsPermission(){
+        int currentAPIVersion = Build.VERSION.SDK_INT;
+        if(currentAPIVersion>=android.os.Build.VERSION_CODES.M)
+        {
+            if (ContextCompat.checkSelfPermission(secondActivity.this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(secondActivity.this, Manifest.permission.ACCESS_FINE_LOCATION)) {
+                    AlertDialog.Builder alertBuilder = new AlertDialog.Builder(secondActivity.this);
+                    alertBuilder.setCancelable(true);
+                    alertBuilder.setTitle("Permission Necessary");
+                    alertBuilder.setMessage("GPS permission is necessary to get Location!!!");
+                    alertBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                        public void onClick(DialogInterface dialog, int which) {
+                            ActivityCompat.requestPermissions(secondActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSIONS_FINE_LOCATION);
+                        }
+                    });
+                    AlertDialog alert = alertBuilder.create();
+                    alert.show();
+                } else {
+                    ActivityCompat.requestPermissions(secondActivity.this, new String[]{Manifest.permission.ACCESS_FINE_LOCATION}, MY_PERMISSIONS_FINE_LOCATION);
+                }
+                return false;
+            } else {
+                return true;
+            }
+        } else {
+            return true;
+        }
+    }
+
+    public boolean checkPermission()
+    {
+        int currentAPIVersion = Build.VERSION.SDK_INT;
+        if(currentAPIVersion>=android.os.Build.VERSION_CODES.M)
+        {
+            if (ContextCompat.checkSelfPermission(secondActivity.this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                if (ActivityCompat.shouldShowRequestPermissionRationale(secondActivity.this, Manifest.permission.WRITE_CALENDAR)) {
+                    AlertDialog.Builder alertBuilder = new AlertDialog.Builder(secondActivity.this);
+                    alertBuilder.setCancelable(true);
+                    alertBuilder.setTitle("Permission Necessary");
+                    alertBuilder.setMessage("Write SDCard permission is necessary to Save file!!!");
+                    alertBuilder.setPositiveButton(android.R.string.yes, new DialogInterface.OnClickListener() {
+
+                        public void onClick(DialogInterface dialog, int which) {
+                            ActivityCompat.requestPermissions(secondActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE);
+                        }
+                    });
+                    AlertDialog alert = alertBuilder.create();
+                    alert.show();
+                } else {
+                    ActivityCompat.requestPermissions(secondActivity.this, new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE);
+                }
+                return false;
+            } else {
+                return true;
+            }
+        } else {
+            return true;
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        switch (requestCode) {
+            case MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE: {
+                // If request is cancelled, the result arrays are empty.
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                    // permission was granted, yay! Do the
+                    // contacts-related task you need to do.
+                    Permission_Granted = true;
+                    myFile = new File(Filepath);
+
+                    if (!myFile.exists()) {
+                        try {
+                            myFile.createNewFile();
+                        } catch (IOException e) {
+                            // TODO Auto-generated catch block
+                            e.printStackTrace();
+                        }
+                    }
+                    //Toast.makeText(getApplicationContext(),"permission granted",Toast.LENGTH_SHORT).show();
+
+                } else {
+
+                    // permission denied, boo! Disable the
+                    // functionality that depends on this permission.
+                    Permission_Granted = false;
+                    Toast.makeText(getApplicationContext(),"You won't be able to Save data in file", Toast.LENGTH_SHORT).show();
+                }
+
+            }
+
+            case MY_PERMISSIONS_FINE_LOCATION: {
+                if (grantResults.length > 0
+                        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+
+                   GPS_Permission = true;
+                } else {
+                   GPS_Permission = false;
+                    Toast.makeText(getApplicationContext(),"You won't be able to get Location Service", Toast.LENGTH_SHORT).show();
+                }
+            }
+
+            // other 'case' lines to check for other
+            // permissions this app might request
+        }
+
     }
 
 
@@ -433,7 +581,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
 
 
-        try {
+       /* try {
 
 
                 FileOutputStream fOut=null;
@@ -464,6 +612,43 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
             myOutWriter.close();
             fOut.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }*/
+
+        try {
+            FileOutputStream fo=null;
+            fo = openFileOutput(IFilename, Context.MODE_APPEND);
+            //myOutWriter = new OutputStreamWriter(fo);
+
+            StringBuilder sb = new StringBuilder();
+            sb.append(cellid+"\n"+strDate+"\n"+abc1+"\n"+result+"\n"+result1+"\n"+String.valueOf(latitude)+"\n"+String.valueOf(longitude)+"\n"+mnc+"\n"+mcc);
+            fo.write(sb.toString().getBytes());
+            /*myOutWriter.append(cellid);
+            myOutWriter.append("\n");
+            myOutWriter.append(strDate);
+            myOutWriter.append("\n");
+            myOutWriter.append(abc1);
+            myOutWriter.append("\n");
+            myOutWriter.append(result);
+            myOutWriter.append("\n");
+            myOutWriter.append(result1);
+            myOutWriter.append("\n");
+            myOutWriter.append(String.valueOf(latitude));
+            myOutWriter.append("\n");
+            myOutWriter.append(String.valueOf(longitude));
+            myOutWriter.append("\n");
+            myOutWriter.append(mnc);
+            myOutWriter.append("\n");
+            myOutWriter.append(mcc);
+            myOutWriter.append("\n");
+
+            myOutWriter.close();*/
+            fo.close();
+            Ifilepath = this.getFileStreamPath(IFilename).getAbsolutePath();
+
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -549,6 +734,27 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
         }
     };/* End of private Class */
+    public void uploadFile(String path){
+        startprogress();
+        SimpleMultiPartRequest smp = new SimpleMultiPartRequest(Request.Method.POST, Url, new Response.Listener<String>() {
+            @Override
+            public void onResponse(String response) {
+                stopprogress();
+                Log.d("resp:",response);
+                Toast.makeText(getApplicationContext(),"Uploaded Successfully",Toast.LENGTH_SHORT).show();
+            }
+        }, new Response.ErrorListener() {
+            @Override
+            public void onErrorResponse(VolleyError error) {
+                stopprogress();
+                Log.e("Error:",error.getMessage());
+                Toast.makeText(getApplicationContext(),"Error Ocurred",Toast.LENGTH_SHORT).show();
+            }
+        });
+        smp.addFile("upload_file",path);
+        mqueue.add(smp);
+
+    }
 
     public boolean onCreateOptionsMenu(Menu menu) {
         // Inflate the menu; this adds items to the action bar if it is present.
@@ -559,7 +765,14 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
             case R.id.Upload:
-
+                if(!Permission_Granted){
+                    Toast.makeText(getApplicationContext(),"Try again After Allowing Permission",Toast.LENGTH_LONG).show();
+                    checkPermission();
+                }
+                else{
+                    Log.d("filepath:",Ifilepath);
+                    uploadFile(Ifilepath);
+                }
                // Toast.makeText(getApplicationContext(),"Item 1 Selected",Toast.LENGTH_LONG).show();
                 return true;
             default:
