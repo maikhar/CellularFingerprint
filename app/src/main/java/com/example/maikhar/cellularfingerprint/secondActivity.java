@@ -40,7 +40,6 @@ import com.android.volley.error.VolleyError;
 import com.android.volley.request.SimpleMultiPartRequest;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
@@ -59,7 +58,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     TextView parameters;
     int sec;
     ArrayList<String> clist;
-    String abc1,str,result="",result1="",mcc,mnc,neiglist="";
+    String abc1,str,result="",result1="",mcc,mnc;
     private SensorManager mSensorManager;
     private Sensor accelerometer;
     private Sensor compass;
@@ -79,7 +78,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
     private static final int MY_PERMISSIONS_WRITE_EXTERNAL_STORAGE = 100;
     private static final int MY_PERMISSIONS_FINE_LOCATION = 105;
     private RequestQueue mqueue;
-    private static final String Url = "http://cellularfingerprint.pe.hu/upload/upload.php";
+    private static final String Url = "http://kmodi4.comli.com/upload/upload.php";
     private ProgressDialog pDialog=null;
     private String IFilename = "cell.txt;";
     private String Ifilepath = "";
@@ -507,25 +506,29 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
 
 
+        try {
+            FileOutputStream fo=null;
+            fo = openFileOutput(IFilename, Context.MODE_APPEND);
+            myOutWriter.append("<data>");
 
 
-
-        for(CustObj co:clist_main){
+            for(CustObj co:clist_main){
             if(co.getName().equals("datetime")){
                 co.setVal(strDate);
-
+                myOutWriter.append("<date>"+strDate+"</date>\n");
 
 
             }
             if(co.getName().equals("cellid"))
             {
+                myOutWriter.append("<cellid>"+cellid+"</cellid>\n");
 
 
                 co.setVal(cellid);
             }
             if(co.getName().equals("maincell"))
             {
-
+                myOutWriter.append("<maincell>"+abc1+"</maincell>\n");
 
                 co.setVal(abc1);
             }
@@ -533,27 +536,27 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
             if(co.getName().equals("accelerometer"))
             {
 
-
+                myOutWriter.append("<accelerometer>"+result+"</accelerometer>\n");
                 co.setVal(result);
             }
 
             if(co.getName().equals("compass"))
             {
 
-
+                myOutWriter.append("<compass>"+result1+"</compass>\n");
                 co.setVal(result1);
             }
             if(co.getName().equals("latitude"))
             {
 
 
-
+                myOutWriter.append("<latitude>"+latitude+"</latitude>\n");
                 co.setVal(String.valueOf(latitude));
 
             }
             if(co.getName().equals("longitude"))
             {
-
+                myOutWriter.append("<longitude>"+longitude+"</longitude>\n");
                 co.setVal(String.valueOf(longitude));
             }
             if(co.getName().equals("mcc"))
@@ -561,97 +564,36 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
                 mcc = (networkOperator.substring(0, 3));
 
                 co.setVal(String.valueOf(mcc));
+                myOutWriter.append("<mcc>"+mcc+"</mcc>\n");
 
 
             }
             if(co.getName().equals("mnc"))
             {
                 mnc = (networkOperator.substring(3));
-
+                myOutWriter.append("<mnc>"+mnc+"</mnc>\n");
 
                 co.setVal(String.valueOf(mnc));
             }
 
             if(co.getName().equals("neighbors"))
             {
-
+                myOutWriter.append("<neighbors>"+String.valueOf(mNeighboringCellInfo)+"</neighbors>\n");
                 co.setVal(String.valueOf(mNeighboringCellInfo));
             }
         }
 
 
-
-       /* try {
-
-
-                FileOutputStream fOut=null;
-                fOut = new FileOutputStream(myFile, true);
-                myOutWriter = new OutputStreamWriter(
-                        fOut);
-
-            myOutWriter.append("\n");
-            myOutWriter.append(cellid);
-            myOutWriter.append("\n");
-            myOutWriter.append(strDate);
-            myOutWriter.append("\n");
-            myOutWriter.append(abc1);
-            myOutWriter.append("\n");
-            myOutWriter.append(result);
-            myOutWriter.append("\n");
-            myOutWriter.append(result1);
-            myOutWriter.append("\n");
-            myOutWriter.append(String.valueOf(latitude));
-            myOutWriter.append("\n");
-            myOutWriter.append(String.valueOf(longitude));
-            myOutWriter.append("\n");
-            myOutWriter.append(mnc);
-            myOutWriter.append("\n");
-            myOutWriter.append(mcc);
-
-
+            myOutWriter.append("</data>\n");
 
             myOutWriter.close();
             fOut.close();
         } catch (IOException e) {
             e.printStackTrace();
-        }*/
-
-        try {
-            FileOutputStream fo=null;
-            fo = openFileOutput(IFilename, Context.MODE_APPEND);
-            //myOutWriter = new OutputStreamWriter(fo);
-
-            StringBuilder sb = new StringBuilder();
-            sb.append(cellid+"\n"+strDate+"\n"+abc1+"\n"+result+"\n"+result1+"\n"+String.valueOf(latitude)+"\n"+String.valueOf(longitude)+"\n"+mnc+"\n"+mcc);
-            fo.write(sb.toString().getBytes());
-            /*myOutWriter.append(cellid);
-            myOutWriter.append("\n");
-            myOutWriter.append(strDate);
-            myOutWriter.append("\n");
-            myOutWriter.append(abc1);
-            myOutWriter.append("\n");
-            myOutWriter.append(result);
-            myOutWriter.append("\n");
-            myOutWriter.append(result1);
-            myOutWriter.append("\n");
-            myOutWriter.append(String.valueOf(latitude));
-            myOutWriter.append("\n");
-            myOutWriter.append(String.valueOf(longitude));
-            myOutWriter.append("\n");
-            myOutWriter.append(mnc);
-            myOutWriter.append("\n");
-            myOutWriter.append(mcc);
-            myOutWriter.append("\n");
-
-            myOutWriter.close();*/
-            fo.close();
-            Ifilepath = this.getFileStreamPath(IFilename).getAbsolutePath();
-
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
         }
+
+
+
 
 
     }
@@ -666,13 +608,7 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
         }
 
-       /* Handler h = new Handler();
-      Runnable r = new Runnable() {
-          @Override
-          public void run() {
-                 h.postDelayed(this,,sec);
-          }
-      };*/
+
 
 
 
@@ -782,25 +718,3 @@ public class secondActivity extends AppCompatActivity implements ActivityCompat.
 
 }
 
-/*String stringNeighboring = "Neighboring List- Lac : Cid : RSSI\n";
-
-							for (int i = 0; i < NeighboringList.size(); i++) {
-
-								String dBm;
-								int rssi = NeighboringList.get(i).getRssi();
-								rssi = (2 * rssi) -113 ;
-								if (rssi == NeighboringCellInfo.UNKNOWN_RSSI) {
-									dBm = "Unknown RSSI";
-								} else {
-									dBm = String.valueOf(rssi) + " dBm";
-								}
-
-								stringNeighboring = stringNeighboring
-										+ String.valueOf(NeighboringList.get(i)
-												.getLac())
-										+ "\t     :    "
-										+ String.valueOf(NeighboringList.get(i)
-												.getCid()) + "\t     :    "
-										+ dBm + "\n";
-							}
-							*/
